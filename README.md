@@ -1,13 +1,49 @@
 # 🤖 RAG AI Service Documentation
 
+## Table of Contents
+- [Overview](#overview)
+- [Architecture Flow](#architecture-flow)
+  - [Repository Indexing Flow](#repository-indexing-flow)
+  - [Document Processing Flow](#document-processing-flow)
+  - [Query Processing Flow](#query-processing-flow)
+- [API Endpoints](#api-endpoints)
+  - [2. Search and Answer Code Questions](#2-search-and-answer-code-questions)
+  - [3. Process Document](#3-process-document)
+  - [4. Query Document](#4-query-document)
+- [Helper Functions](#helper-functions)
+  - [Text Processing](#text-processing)
+  - [File Processing](#file-processing)
+  - [Repository Processing](#repository-processing)
+- [Configuration](#configuration)
+  - [Environment Variables](#environment-variables)
+  - [CORS Configuration](#cors-configuration)
+- [Vector Storage](#vector-storage)
+  - [Collection Schemas](#collection-schemas)
+  - [Indexing Configuration](#indexing-configuration)
+- [Error Handling](#error-handling)
+  - [Common Error Scenarios](#common-error-scenarios)
+  - [Error Response Format](#error-response-format)
+- [Getting Started](#getting-started)
+- [Best Practices](#best-practices)
+  - [Repository Indexing](#repository-indexing)
+  - [Document Processing](#document-processing)
+  - [Querying](#querying)
+  - [Performance Optimization](#performance-optimization)
+  - [Security Considerations](#security-considerations)
+- [Limitations](#limitations)
+
+
+
 ## Overview
 This service provides a Retrieval-Augmented Generation (RAG) system built with FastAPI that enables:
-- Repository code indexing and searching
-- Document processing and querying
-- Integration with Gemini AI for intelligent responses
-- Vector storage using AstraDB
 
-## 🔄 Architecture Flow
+- 📚 Multi-format document support (PDF, DOCX, TXT)
+- 💻 GitHub repository code indexing
+- 🔍 Semantic search capabilities
+- 🤖 AI-powered response generation
+- 🔄 Efficient chunking and vectorization
+
+## Architecture Flow
 
 ### Repository Indexing Flow
 ```mermaid
@@ -33,80 +69,63 @@ graph TD
     B -->|Return Chunks| A
 ```
 
-## 🛠️ API Endpoints
+### Query Processing Flow
+```mermaid
+graph TD
+    A[Client] -->|Query Request| B[FastAPI Server]
+    B -->|Vector Search| C[AstraDB]
+    C -->|Relevant Chunks| D[Gemini AI]
+    D -->|Generate Response| E[Response Formatter]
+    E -->|Markdown Response| A
+```
 
-### 1. Index Repository
-Indexes a GitHub repository's code files into AstraDB.
+## API Endpoints
 
-**Endpoint:** `POST /index_repo`
 
-**Query Parameters:**
-- `repo_url` (string, required): GitHub repository URL
 
-**Example Request:**
-```bash
-curl -X POST "http://your-domain/index_repo?repo_url=https://github.com/username/repo"
+### 2. Search and Answer Code Questions
+Searches indexed repository content and generates AI-powered answers.
+
+**Endpoint:** `POST /search_and_answer`
+
+**Request Body:**
+```json
+{
+    "query": "How does the authentication system work?",
+    "repo": {
+        "repoUrl": "https://github.com/username/repo",
+        "structure": "repository_structure_string"
+    }
+}
 ```
 
 **Success Response:**
 ```json
 {
-    "message": "Repository indexed successfully"
-}
-```
-
-**Error Response:**
-```json
-{
-    "detail": "Error message description"
-}
-```
-
-### 2. Search and Answer Code Questions
-```markdown
-POST /search_and_answer
-```
-Searches indexed repository content and generates AI-powered answers.
-
-**Request Body:**
-```json
-{
-    "query": "string",
-    "repo": {
-        "repoUrl": "string",
-        "structure": "string"
-    }
-}
-```
-
-**Response:**
-```json
-{
-    "ans": "AI-generated answer in markdown format"
+    "ans": "Markdown formatted answer with code examples and explanations"
 }
 ```
 
 ### 3. Process Document
-```markdown
-POST /process-file/
-```
-Processes and indexes external documents (PDF, DOCX, TXT).
+Processes and indexes external documents.
+
+**Endpoint:** `POST /process-file/`
 
 **Request Body:**
 ```json
 {
-    "file_url": "string"  // URL of the document to process
+    "file_url": "https://example.com/document.pdf"
 }
 ```
 
-**Response:**
+**Success Response:**
 ```json
 {
     "chunks": [
         {
-            "fileurl": "string",
-            "chunk_content": "string",
-            "chunk_number": "integer"
+            "fileurl": "https://example.com/document.pdf",
+            "chunk_content": "Text content...",
+            "chunk_number": 1
         }
     ]
 }
@@ -132,40 +151,72 @@ curl -X POST "http://your-domain/query-document?query=What%20are%20the%20main%20
 }
 ```
 
-## 🔧 Helper Functions
+## Helper Functions
 
-### `clean_text(text: str) -> str`
-Cleans and normalizes text input.
-- Removes extra spaces and newlines
-- Removes non-ASCII characters
-- Returns cleaned text
-
-### `extract_text_from_file(url: str) -> str`
-Extracts text content from various file formats.
-- Supports PDF, DOCX, and TXT files
-- Handles different MIME types
-- Returns extracted text content
-
-### `fetch_and_chunk(api_url: str, repo_url: str) -> list`
-Fetches and processes GitHub repository contents.
-- Recursively fetches files and directories
-- Filters code files by extension
-- Splits content into chunks
-- Returns list of document chunks with metadata
-
-## 🔐 Configuration Requirements
-
+### Text Processing
 ```python
-# Required Environment Variables
-ASTRA_DB_APPLICATION_TOKEN = "your-astra-db-token"
-ASTRA_DB_API_ENDPOINT = "your-astra-db-endpoint"
-GITHUB_TOKEN = "your-github-token"
-GEMINI_API_KEY = "your-gemini-api-key"
+def clean_text(text: str) -> str:
+    """
+    Cleans and normalizes text input.
+    
+    Args:
+        text (str): Input text
+        
+    Returns:
+        str: Cleaned text
+    """
+    # Removes extra spaces, newlines, and non-ASCII characters
+    return cleaned_text
 ```
 
-## 🎯 CORS Configuration
+### File Processing
+```python
+def extract_text_from_file(url: str) -> str:
+    """
+    Extracts text from various file formats.
+    
+    Supported formats:
+    - PDF
+    - DOCX
+    - TXT
+    
+    Args:
+        url (str): File URL
+        
+    Returns:
+        str: Extracted text
+    """
+    return extracted_text
+```
 
-The service supports CORS with the following default configuration:
+### Repository Processing
+```python
+def fetch_and_chunk(api_url: str, repo_url: str) -> list:
+    """
+    Processes GitHub repository contents.
+    
+    Args:
+        api_url (str): GitHub API URL
+        repo_url (str): Repository URL
+        
+    Returns:
+        list: Document chunks with metadata
+    """
+    return documents
+```
+
+## Configuration
+
+### Environment Variables
+```bash
+# Required Environment Variables
+ASTRA_DB_APPLICATION_TOKEN=your-astra-db-token
+ASTRA_DB_API_ENDPOINT=your-astra-db-endpoint
+GITHUB_TOKEN=your-github-token
+GEMINI_API_KEY=your-gemini-api-key
+```
+
+### CORS Configuration
 ```python
 origins = [
     "http://localhost",
@@ -175,45 +226,135 @@ origins = [
 ]
 ```
 
-## 🔄 Vector Storage Schema
+## Vector Storage
 
-### Code Repository Collection
-```markdown
+### Collection Schemas
+
+#### Code Repository Collection
+```json
 {
     "name": "src_url={blob_url} =>chunk_no={chunk_no}",
     "$vectorize": "cleaned_code_chunk"
 }
 ```
 
-### Document Collection
-```markdown
+#### Document Collection
+```json
 {
     "name": "filename={filename} src_url={file_url} =>chunk_no={chunk_number}",
     "$vectorize": "cleaned_document_chunk"
 }
 ```
 
-## ⚠️ Error Handling
+### Indexing Configuration
+- Chunk size: 500 characters
+- Chunk overlap: 0 characters
+- Vector dimension: 1024
+- Vector metric: DOT_PRODUCT
+- Provider: NVIDIA
+- Model: NV-Embed-QA
 
-The service implements comprehensive error handling:
-- Invalid file types
-- Failed GitHub API requests
-- Vector storage operations
-- AI model generation errors
+## Error Handling
 
-All errors are returned with appropriate HTTP status codes and descriptive messages.
+### Common Error Scenarios
+1. Invalid File Types
+```json
+{
+    "detail": "Unsupported file type"
+}
+```
 
-## 🚀 Getting Started
+2. GitHub API Errors
+```json
+{
+    "detail": "Unable to access repository: [error details]"
+}
+```
 
-1. Set up required environment variables
-2. Install dependencies
-3. Start the FastAPI server
-4. Use the endpoints to index repositories or documents
-5. Query the indexed content using natural language
+3. Vector Storage Errors
+```json
+{
+    "detail": "Error storing vectors: [error details]"
+}
+```
 
-## 📝 Notes
+### Error Response Format
+All errors follow the structure:
+```json
+{
+    "detail": "Error message"
+}
+```
 
-- The service uses Gemini 1.5 Flash 8B model for AI responses
-- Repository indexing ignores certain paths (node_modules, packages, etc.)
-- Document chunks are limited to 500 characters with no overlap
-- Responses are formatted in Markdown with emojis for better readability
+## Getting Started
+
+1. **Environment Setup**
+```bash
+# Clone the repository
+git clone [repository-url]
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+export ASTRA_DB_APPLICATION_TOKEN=your-token
+export ASTRA_DB_API_ENDPOINT=your-endpoint
+export GITHUB_TOKEN=your-github-token
+export GEMINI_API_KEY=your-gemini-key
+```
+
+2. **Start the Server**
+```bash
+uvicorn main:app --reload
+```
+
+3. **Test the API**
+```bash
+# Index a repository
+curl -X POST "http://localhost:8000/index_repo?repo_url=https://github.com/username/repo"
+
+# Process a document
+curl -X POST "http://localhost:8000/process-file/" \
+    -H "Content-Type: application/json" \
+    -d '{"file_url": "https://example.com/document.pdf"}'
+```
+
+## Best Practices
+
+### Repository Indexing
+- Index smaller repositories first
+- Avoid repositories with large binary files
+- Use specific repository paths when possible
+
+### Document Processing
+- Ensure documents are publicly accessible
+- Keep documents under 100MB
+- Use PDF or DOCX for formatted content
+- Use TXT for plain text content
+
+### Querying
+- Be specific in queries
+- Reference file names when known
+- Use context-specific terminology
+
+### Performance Optimization
+- Regular collection cleanup
+- Monitor vector storage usage
+- Cache frequent queries
+- Use batch processing for large repositories
+
+### Security Considerations
+- Secure API endpoints
+- Validate file URLs
+- Implement rate limiting
+- Monitor API usage
+- Sanitize user inputs
+
+## Limitations
+- Maximum file size: 100MB
+- Supported file types: PDF, DOCX, TXT
+- Maximum query length: 1000 characters
+- Rate limits: 100 requests per minute
+- Vector dimension: 1024
+- Maximum chunks per document: 1000
+
